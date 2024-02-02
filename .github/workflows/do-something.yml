@@ -1,3 +1,5 @@
+name: Do something
+
 on:
   workflow_dispatch:
     inputs:
@@ -7,7 +9,7 @@ on:
         default: ''
       distinct_id:
 
-name: Do something ${{ github.event.inputs.distinct_id || '' }}
+run-name: Do something ${{ github.event.inputs.distinct_id || '' }}
 
 permissions:
   contents: read
