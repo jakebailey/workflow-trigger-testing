@@ -9,7 +9,7 @@ on:
         default: ''
       distinct_id:
 
-run-name: Do something ${{ github.event.inputs.distinct_id || '' }}
+run-name: ${{ github.workflow }}${{ github.event.inputs.distinct_id && format(' (bot run {0})', github.event.inputs.distinct_id) || '' }}
 
 permissions:
   contents: read
