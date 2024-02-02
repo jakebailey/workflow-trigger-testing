@@ -39,11 +39,6 @@ while (true) {
     // console.log(JSON.stringify(runs.data));
 
     for (const run of runs.data.workflow_runs) {
-        if (run.name?.includes(uuid)) {
-            console.log("Found it!", run.html_url);
-            break search;
-        }
-
         const jobs = await octokit.actions.listJobsForWorkflowRun({
             owner,
             repo,
