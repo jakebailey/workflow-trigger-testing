@@ -23,16 +23,20 @@ await octokit.actions.createWorkflowDispatch({
     },
 });
 
+const created = `>=${before.toISOString()}`;
+// console.log(created);
+
 search:
 while (true) {
     const runs = await octokit.actions.listWorkflowRuns({
         owner,
         repo,
         workflow_id: workflowId,
-        status: "completed",
         per_page: 100,
-        created: `>=${before.toISOString()}`,
+        created,
     });
+
+    // console.log(JSON.stringify(runs.data));
 
     for (const run of runs.data.workflow_runs) {
         const jobs = await octokit.actions.listJobsForWorkflowRun({
@@ -41,10 +45,12 @@ while (true) {
             run_id: run.id,
         });
 
+        // console.log(JSON.stringify(jobs.data));
+
         for (const job of jobs.data.jobs) {
             for (const step of job.steps ?? []) {
                 if (step.name.includes(uuid)) {
-                    console.log("Found it!", step.name);
+                    console.log("Found it!", run.html_url);
                     break search;
                 }
             }
