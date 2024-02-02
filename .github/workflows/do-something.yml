@@ -1,0 +1,33 @@
+name: Do something
+
+on:
+  workflow_dispatch:
+    inputs:
+      arg:
+        description: 'An argument'
+        required: true
+        default: ''
+      distinct_id:
+
+permissions:
+  contents: read
+
+# Ensure scripts are run with pipefail. See:
+# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#exit-codes-and-error-action-preference
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: echo distinct ID ${{ github.event.inputs.distinct_id }}
+        run: echo ${{ github.event.inputs.distinct_id }}
+
+      - run: |
+          sleep 100
+
+      - run: |
+          echo "Running with arg: ${{ github.event.inputs.arg }}"
