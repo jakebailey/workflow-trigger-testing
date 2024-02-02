@@ -1,4 +1,5 @@
 import { Octokit } from "@octokit/rest";
+import prettyMilliseconds from "pretty-ms";
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
@@ -23,44 +24,34 @@ await octokit.actions.createWorkflowDispatch({
     },
 });
 
-const created = `>=${before.toISOString()}`;
-// console.log(created);
+async function find() {
+    const created = `>=${before.toISOString()}`;
 
-search:
-while (true) {
-    const runs = await octokit.actions.listWorkflowRuns({
-        owner,
-        repo,
-        workflow_id: workflowId,
-        per_page: 100,
-        created,
-    });
+    let tries = 0;
 
-    // console.log(JSON.stringify(runs.data));
+    while (true) {
+        tries++;
 
-    for (const run of runs.data.workflow_runs) {
-        if (run.name?.includes(uuid)) {
-            console.log("Found it!", run.html_url);
-            break search;
-        }
-
-        const jobs = await octokit.actions.listJobsForWorkflowRun({
+        const runs = await octokit.actions.listWorkflowRuns({
             owner,
             repo,
-            run_id: run.id,
+            workflow_id: workflowId,
+            per_page: 100,
+            created,
         });
 
-        // console.log(JSON.stringify(jobs.data));
-
-        for (const job of jobs.data.jobs) {
-            for (const step of job.steps ?? []) {
-                if (step.name.includes(uuid)) {
-                    console.log("Found it!", run.html_url);
-                    break search;
-                }
+        for (const run of runs.data.workflow_runs) {
+            if (run.name?.includes(uuid)) {
+                console.log("Found it!", run.html_url);
+                return { run, tries };
             }
         }
-    }
 
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
 }
+
+const { run, tries } = await find();
+
+console.log(run.html_url);
+console.log(`took ${prettyMilliseconds(Date.now() - before.getUTCMilliseconds())} using ${tries} tries.`);

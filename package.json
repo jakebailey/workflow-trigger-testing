@@ -14,5 +14,8 @@
     "@octokit/rest": "^20.0.2",
     "@types/node": "^20.11.16",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "pretty-ms": "^9.0.0"
   }
 }
