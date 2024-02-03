@@ -52,7 +52,7 @@ jobs:
           ARG: ${{ inputs.arg }}
         with:
           script: |
-            const { DISTINCT_ID, ISSUE_NUMBER, STATUS_COMMENT_ID } = process.env;
+            const { DISTINCT_ID, ISSUE_NUMBER, STATUS_COMMENT_ID, ARG } = process.env;
             // Post results
             const resultsComment = await github.rest.issues.createComment({
               issue_number: +ISSUE_NUMBER,
