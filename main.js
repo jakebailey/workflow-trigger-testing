@@ -45,7 +45,6 @@ async function find() {
         //     owner,
         //     repo,
         //     workflow_id: workflowId,
-        //     per_page: 100,
         //     created,
         // });
 
@@ -53,7 +52,6 @@ async function find() {
         const runs = await octokit.actions.listWorkflowRunsForRepo({
             owner,
             repo,
-            per_page: 100,
             created,
             exclude_pull_requests: true,
         });
