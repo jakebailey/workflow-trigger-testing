@@ -9,7 +9,7 @@ const owner = "jakebailey";
 const repo = "workflow-trigger-testing";
 const workflowId = "do-something.yml";
 
-const before = new Date();
+const start = Date.now();
 
 const uuid = crypto.randomUUID();
 
@@ -24,18 +24,35 @@ await octokit.actions.createWorkflowDispatch({
     },
 });
 
+/**
+ * @param {number} ms
+ */
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+await sleep(300);
+
 async function find() {
-    const created = `>=${before.toISOString()}`;
+    const created = `>=${new Date(start).toISOString()}`;
 
     let tries = 0;
 
     while (true) {
         tries++;
 
-        const runs = await octokit.actions.listWorkflowRuns({
+        // const runs = await octokit.actions.listWorkflowRuns({
+        //     owner,
+        //     repo,
+        //     workflow_id: workflowId,
+        //     per_page: 100,
+        //     created,
+        // });
+
+        // If we use this call, we could look for many pipelines at once.
+        const runs = await octokit.actions.listWorkflowRunsForRepo({
             owner,
             repo,
-            workflow_id: workflowId,
             per_page: 100,
             created,
         });
@@ -47,11 +64,11 @@ async function find() {
             }
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await sleep(300);
     }
 }
 
 const { run, tries } = await find();
 
 console.log(run.html_url);
-console.log(`took ${prettyMilliseconds(Date.now() - before.getUTCMilliseconds())} using ${tries} tries.`);
+console.log(`took ${prettyMilliseconds(Date.now() - start)} using ${tries} tries.`);
