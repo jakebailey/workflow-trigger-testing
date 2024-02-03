@@ -16,13 +16,11 @@ on:
       issue_number:
         description: '(bot) An issue number'
         required: false
-        type: number
-        default: 0
+        default: ''
       status_comment_id:
         description: '(bot) A comment ID'
         required: false
-        type: number
-        default: 0
+        default: ''
 
 run-name: ${{ github.workflow }}${{ inputs.distinct_id && format(' (bot run {0})', inputs.distinct_id) || '' }}
 
