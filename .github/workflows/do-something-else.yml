@@ -16,18 +16,17 @@ on:
       issue_number:
         description: '(bot) An issue number'
         required: false
-        type: number
-        default: 0
+        default: ''
       status_comment_id:
         description: '(bot) A comment ID'
         required: false
-        type: number
-        default: 0
+        default: ''
 
 run-name: ${{ github.workflow }}${{ inputs.distinct_id && format(' (bot run {0})', inputs.distinct_id) || '' }}
 
 permissions:
   contents: read
+  issues: write
 
 # Ensure scripts are run with pipefail. See:
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#exit-codes-and-error-action-preference
@@ -40,10 +39,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: echo distinct ID ${{ inputs.distinct_id }}
-        run: echo ${{ inputs.distinct_id }}
-        if: ${{ inputs.distinct_id }}
-
       - run: |
           (( RANDOM % 2 )) && sleep 40 || sleep 20
 
@@ -58,13 +53,13 @@ jobs:
           ARG: ${{ inputs.arg }}
         with:
           script: |
-            const { DISTINCT_ID, ISSUE_NUMBER, STATUS_COMMENT_ID } = process.env;
+            const { DISTINCT_ID, ISSUE_NUMBER, STATUS_COMMENT_ID, ARG } = process.env;
             // Post results
             const resultsComment = await github.rest.issues.createComment({
               issue_number: +ISSUE_NUMBER,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `The results for ${arg} are in!`,
+              body: `The results for ${ARG} are in!`,
             });
 
             // Get status comment contents

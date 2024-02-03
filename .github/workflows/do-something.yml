@@ -26,6 +26,7 @@ run-name: ${{ github.workflow }}${{ inputs.distinct_id && format(' (bot run {0})
 
 permissions:
   contents: read
+  issues: write
 
 # Ensure scripts are run with pipefail. See:
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#exit-codes-and-error-action-preference
