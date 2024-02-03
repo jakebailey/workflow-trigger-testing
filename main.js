@@ -55,6 +55,7 @@ async function find() {
             repo,
             per_page: 100,
             created,
+            exclude_pull_requests: true,
         });
 
         for (const run of runs.data.workflow_runs) {
