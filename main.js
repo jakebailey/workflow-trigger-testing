@@ -2,27 +2,10 @@ import { Octokit } from "@octokit/rest";
 import prettyMilliseconds from "pretty-ms";
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
 const owner = "jakebailey";
 const repo = "workflow-trigger-testing";
-const workflowId = "do-something.yml";
-
-const start = Date.now();
-
-const uuid = crypto.randomUUID();
-
-await octokit.actions.createWorkflowDispatch({
-    owner,
-    repo,
-    ref: "main",
-    workflow_id: workflowId,
-    inputs: {
-        arg: "this is some info",
-        distinct_id: uuid,
-    },
-});
 
 /**
  * @param {number} ms
@@ -31,43 +14,100 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-await sleep(300);
+/**
+ * @param {string} workflowId
+ * @param {Record<string, unknown>} inputs
+ */
+async function startGitHubWorkflow(workflowId, inputs) {
+    await octokit.actions.createWorkflowDispatch({
+        owner,
+        repo,
+        ref: "main",
+        workflow_id: workflowId,
+        inputs: inputs,
+    });
+}
 
-async function find() {
-    const created = `>=${new Date(start).toISOString()}`;
+/**
+ * @param {string} projectId
+ * @param {number} pipelineId
+ * @param {Record<string, string>} _inputs
+ */
+async function startPipelineRun(projectId, pipelineId, _inputs) {
+    await sleep(300);
+    return `https://example.com/${projectId}/${pipelineId}`;
+}
 
-    let tries = 0;
+/**
+ * @typedef {{ kind: "unresolvedGitHub"; distinctId: string }} UnresolvedGitHubRun
+ * @typedef {{ kind: "resolved"; url: string }} ResolvedRun
+ * @typedef {UnresolvedGitHubRun | ResolvedRun} Run
+ *
+ * @typedef {{ distinctId: string }} Context
+ * @typedef {(context: Context) => Promise<Run>} CommandFn
+ */
+void 0;
 
-    while (true) {
-        tries++;
+/** @type {(run: Run) => run is UnresolvedGitHubRun} */
+function isUnresolvedGitHubRun(run) {
+    return run.kind === "unresolvedGitHub";
+}
 
-        // const runs = await octokit.actions.listWorkflowRuns({
-        //     owner,
-        //     repo,
-        //     workflow_id: workflowId,
-        //     created,
-        // });
+const start = Date.now();
+const created = `>=${new Date(start).toISOString()}`;
 
-        // If we use this call, we could look for many pipelines at once.
-        const runs = await octokit.actions.listWorkflowRunsForRepo({
-            owner,
-            repo,
-            created,
-            exclude_pull_requests: true,
+/** @type {[name: string, fn: CommandFn][]} */
+const commandsToRun = [
+    ["do something", async (context) => {
+        await startGitHubWorkflow("do-something.yml", {
+            arg: "this is some info",
+            distinct_id: context.distinctId,
         });
+        return { kind: "unresolvedGitHub", distinctId: context.distinctId };
+    }],
+    ["do something else", async (context) => {
+        await startGitHubWorkflow("do-something-else.yml", {
+            arg: "this is some info again",
+            distinct_id: context.distinctId,
+        });
+        return { kind: "unresolvedGitHub", distinctId: context.distinctId };
+    }],
+    ["do a pipeline", async (_context) => {
+        const url = await startPipelineRun("my-project", 123, {});
+        return { kind: "resolved", url };
+    }],
+];
 
-        for (const run of runs.data.workflow_runs) {
-            if (run.name?.includes(uuid)) {
-                console.log("Found it!", run.html_url);
-                return { run, tries };
+const commentNumber = 12345678;
+
+const firstStage = commandsToRun.map(async ([name, fn], index) => {
+    const context = { distinctId: `${commentNumber}-${index}` };
+    return fn(context);
+});
+
+const results = await Promise.all(firstStage);
+
+console.table(results);
+
+while (results.some(isUnresolvedGitHubRun)) {
+    await sleep(300);
+
+    const runsResponse = await octokit.actions.listWorkflowRunsForRepo({
+        owner,
+        repo,
+        created,
+        exclude_pull_requests: true,
+    });
+    const runs = runsResponse.data.workflow_runs;
+
+    for (let i = 0; i < results.length; i++) {
+        if (isUnresolvedGitHubRun(results[i])) {
+            const run = runs.find((run) => run.name?.includes(`${commentNumber}-${i}`));
+            if (run) {
+                results[i] = { kind: "resolved", url: run.html_url };
             }
         }
-
-        await sleep(300);
     }
 }
 
-const { run, tries } = await find();
-
-console.log(run.html_url);
-console.log(`took ${prettyMilliseconds(Date.now() - start)} using ${tries} tries.`);
+console.table(results);
