@@ -17,8 +17,8 @@ function sleep(ms) {
 
 /**
  * @param {string} workflowId
- * @param {{ distinct_id: string; issue_number: number; status_comment_id: number }} info
- * @param {Record<string, unknown>} inputs
+ * @param {{ distinct_id: string; issue_number: string; status_comment_id: string }} info
+ * @param {Record<string, string>} inputs
  */
 async function startGitHubWorkflow(workflowId, info, inputs) {
     await octokit.rest.actions.createWorkflowDispatch({
@@ -66,8 +66,8 @@ const commandsToRun = [
             "do-something.yml",
             {
                 distinct_id: context.distinctId,
-                issue_number: context.issueNumber,
-                status_comment_id: context.statusCommentId,
+                issue_number: `${context.issueNumber}`,
+                status_comment_id: `${context.statusCommentId}`,
             },
             {
                 arg: "this is some info",
@@ -80,8 +80,8 @@ const commandsToRun = [
             "do-something-else.yml",
             {
                 distinct_id: context.distinctId,
-                issue_number: context.issueNumber,
-                status_comment_id: context.statusCommentId,
+                issue_number: `${context.issueNumber}`,
+                status_comment_id: `${context.statusCommentId}`,
             },
             {
                 arg: "this is some info again",
@@ -163,6 +163,7 @@ async function updateComment() {
         comment_id: statusCommentNumber,
     });
 
+    const originalBody = comment.data.body;
     let body = comment.data.body;
     assert(body);
 
@@ -185,6 +186,10 @@ async function updateComment() {
         if (replacement) {
             body = body.replace(toReplace, replacement);
         }
+    }
+
+    if (body === originalBody) {
+        return;
     }
 
     await octokit.rest.issues.updateComment({
