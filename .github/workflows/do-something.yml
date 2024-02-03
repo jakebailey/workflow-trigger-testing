@@ -38,10 +38,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: echo distinct ID ${{ inputs.distinct_id }}
-        run: echo ${{ inputs.distinct_id }}
-        if: ${{ inputs.distinct_id }}
-
       - run: |
           (( RANDOM % 2 )) && sleep 40 || sleep 20
 
@@ -62,7 +58,7 @@ jobs:
               issue_number: +ISSUE_NUMBER,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `The results for ${arg} are in!`,
+              body: `The results for ${ARG} are in!`,
             });
 
             // Get status comment contents
