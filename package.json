@@ -11,11 +11,11 @@
   "license": "MIT",
   "type": "module",
   "devDependencies": {
-    "@octokit/rest": "^20.0.2",
     "@types/node": "^20.11.16",
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "octokit": "^3.1.2",
     "pretty-ms": "^9.0.0"
   }
 }

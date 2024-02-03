@@ -1,4 +1,5 @@
-import { Octokit } from "@octokit/rest";
+import assert from "node:assert";
+import { Octokit } from "octokit";
 import prettyMilliseconds from "pretty-ms";
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -19,7 +20,7 @@ function sleep(ms) {
  * @param {Record<string, unknown>} inputs
  */
 async function startGitHubWorkflow(workflowId, inputs) {
-    await octokit.actions.createWorkflowDispatch({
+    await octokit.rest.actions.createWorkflowDispatch({
         owner,
         repo,
         ref: "main",
@@ -40,10 +41,11 @@ async function startPipelineRun(projectId, pipelineId, _inputs) {
 
 /**
  * @typedef {{ kind: "unresolvedGitHub"; distinctId: string }} UnresolvedGitHubRun
- * @typedef {{ kind: "resolved"; url: string }} ResolvedRun
- * @typedef {UnresolvedGitHubRun | ResolvedRun} Run
+ * @typedef {{ kind: "resolved"; distinctId: string; url: string }} ResolvedRun
+ * @typedef {{ kind: "error"; distinctId: string; error: string }} ErrorRun
+ * @typedef {UnresolvedGitHubRun | ResolvedRun | ErrorRun} Run
  *
- * @typedef {{ distinctId: string }} Context
+ * @typedef {{ args: string; commentId: number; distinctId: string }} Context
  * @typedef {(context: Context) => Promise<Run>} CommandFn
  */
 void 0;
@@ -52,9 +54,6 @@ void 0;
 function isUnresolvedGitHubRun(run) {
     return run.kind === "unresolvedGitHub";
 }
-
-const start = Date.now();
-const created = `>=${new Date(start).toISOString()}`;
 
 /** @type {[name: string, fn: CommandFn][]} */
 const commandsToRun = [
@@ -72,42 +71,138 @@ const commandsToRun = [
         });
         return { kind: "unresolvedGitHub", distinctId: context.distinctId };
     }],
-    ["do a pipeline", async (_context) => {
+    ["do a pipeline", async (context) => {
         const url = await startPipelineRun("my-project", 123, {});
-        return { kind: "resolved", url };
+        return { kind: "resolved", distinctId: context.distinctId, url };
     }],
 ];
 
-const commentNumber = 12345678;
+// Simulated comment
+const requestingIssueNumber = 1;
+const requestingCommentNumber = 19250981251;
 
-const firstStage = commandsToRun.map(async ([name, fn], index) => {
-    const context = { distinctId: `${commentNumber}-${index}` };
-    return fn(context);
+const start = Date.now();
+const created = `>=${new Date(start).toISOString()}`;
+
+// Before this, choose the commands.
+
+const commandInfos = commandsToRun.map(([name, fn], index) => {
+    return {
+        name,
+        fn,
+        distinctId: `${requestingCommentNumber}-${index}`,
+    };
 });
 
-const results = await Promise.all(firstStage);
+const statusCommentBody = `
+Starting jobs...
 
-console.table(results);
+| Command | Status | Results |
+| ------- | ------ | ------- |
+${
+    commandInfos.map(({ name, distinctId }) =>
+        `| ${name} | <!--status-${distinctId}--> | <!--result-${distinctId}--> |`
+    )
+        .join("\n")
+}
+`.trim();
 
-while (results.some(isUnresolvedGitHubRun)) {
+console.log(statusCommentBody);
+
+const statusComment = await octokit.rest.issues.createComment({
+    owner,
+    repo,
+    issue_number: requestingIssueNumber,
+    body: statusCommentBody,
+});
+
+const statusCommentNumber = statusComment.data.id;
+
+/** @type {Run[]} */
+const startedRuns = await Promise.all(commandInfos.map(async ({ name, fn, distinctId }) => {
+    try {
+        return await fn({
+            args: name,
+            commentId: statusCommentNumber,
+            distinctId,
+        });
+    } catch (e) {
+        // TODO: short error message
+        return { kind: "error", distinctId, error: `${e}` };
+    }
+}));
+
+const afterStart = Date.now();
+console.log(`Started in ${prettyMilliseconds(afterStart - start)}`);
+
+console.table(startedRuns);
+
+async function updateComment() {
+    const comment = await octokit.rest.issues.getComment({
+        owner,
+        repo,
+        comment_id: statusCommentNumber,
+    });
+
+    let body = comment.data.body;
+    assert(body);
+
+    for (const run of startedRuns) {
+        const toReplace = `<!--status-${run.distinctId}-->`;
+        let replacement;
+
+        switch (run.kind) {
+            case "unresolvedGitHub":
+                // Do nothing
+                break;
+            case "resolved":
+                replacement = `[started](${run.url})`;
+                break;
+            case "error":
+                replacement = `error: ${run.error}`;
+                break;
+        }
+
+        if (replacement) {
+            body = body.replace(toReplace, replacement);
+        }
+    }
+
+    await octokit.rest.issues.updateComment({
+        owner,
+        repo,
+        comment_id: statusCommentNumber,
+        body,
+    });
+}
+
+await updateComment();
+console.log("Updated comment with build links");
+
+while (startedRuns.some(isUnresolvedGitHubRun)) {
     await sleep(300);
 
-    const runsResponse = await octokit.actions.listWorkflowRunsForRepo({
+    const response = await octokit.rest.actions.listWorkflowRunsForRepo({
         owner,
         repo,
         created,
         exclude_pull_requests: true,
     });
-    const runs = runsResponse.data.workflow_runs;
+    const runs = response.data.workflow_runs;
 
-    for (let i = 0; i < results.length; i++) {
-        if (isUnresolvedGitHubRun(results[i])) {
-            const run = runs.find((run) => run.name?.includes(`${commentNumber}-${i}`));
-            if (run) {
-                results[i] = { kind: "resolved", url: run.html_url };
+    for (const [i, run] of startedRuns.entries()) {
+        if (isUnresolvedGitHubRun(run)) {
+            const match = runs.find((candidate) => candidate.name?.includes(`${requestingCommentNumber}-${i}`));
+            if (match) {
+                startedRuns[i] = { kind: "resolved", distinctId: run.distinctId, url: match.html_url };
             }
         }
     }
 }
 
-console.table(results);
+const afterFind = Date.now();
+console.log(`Found in ${prettyMilliseconds(afterFind - afterStart)}`);
+console.table(startedRuns);
+
+await updateComment();
+console.log("Updated comment with build links");
