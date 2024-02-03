@@ -7,9 +7,24 @@ on:
         description: 'An argument'
         required: true
         default: ''
-      distinct_id:
 
-run-name: ${{ github.workflow }}${{ github.event.inputs.distinct_id && format(' (bot run {0})', github.event.inputs.distinct_id) || '' }}
+      # For bot trigger
+      distinct_id:
+        description: '(bot) A distinct ID'
+        required: false
+        default: ''
+      issue_number:
+        description: '(bot) An issue number'
+        required: false
+        type: number
+        default: 0
+      status_comment_id:
+        description: '(bot) A comment ID'
+        required: false
+        type: number
+        default: 0
+
+run-name: ${{ github.workflow }}${{ inputs.distinct_id && format(' (bot run {0})', inputs.distinct_id) || '' }}
 
 permissions:
   contents: read
@@ -25,11 +40,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: echo distinct ID ${{ github.event.inputs.distinct_id }}
-        run: echo ${{ github.event.inputs.distinct_id }}
+      - name: echo distinct ID ${{ inputs.distinct_id }}
+        run: echo ${{ inputs.distinct_id }}
+        if: ${{ inputs.distinct_id }}
 
       - run: |
-          sleep 100
+          (( RANDOM % 2 )) && sleep 40 || sleep 20
 
       - run: |
-          echo "Running with arg: ${{ github.event.inputs.arg }}"
+          echo "Running with arg: ${{ inputs.arg }}"
+
+      - uses: actions/github-script@v7
+        env:
+          DISTINCT_ID: ${{ inputs.distinct_id }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          STATUS_COMMENT_ID: ${{ inputs.status_comment_id }}
+          ARG: ${{ inputs.arg }}
+        with:
+          script: |
+            const { DISTINCT_ID, ISSUE_NUMBER, STATUS_COMMENT_ID } = process.env;
+            // Post results
+            const resultsComment = await github.rest.issues.createComment({
+              issue_number: +ISSUE_NUMBER,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `The results for ${arg} are in!`,
+            });
+
+            // Get status comment contents
+            const statusComment = await github.rest.issues.getComment({
+              comment_id: +STATUS_COMMENT_ID,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const newComment = statusComment.data.body.replace(
+              `<!--result-${DISTINCT_ID}-->`,
+              `[Results](${resultsComment.data.html_url})`,
+            )
+
+            // Update status comment
+            await github.rest.issues.updateComment({
+              comment_id: +STATUS_COMMENT_ID,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: newComment,
+            });
+        if: ${{ inputs.distinct_id }}

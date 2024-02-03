@@ -17,15 +17,19 @@ function sleep(ms) {
 
 /**
  * @param {string} workflowId
+ * @param {{ distinct_id: string; issue_number: number; status_comment_id: number }} info
  * @param {Record<string, unknown>} inputs
  */
-async function startGitHubWorkflow(workflowId, inputs) {
+async function startGitHubWorkflow(workflowId, info, inputs) {
     await octokit.rest.actions.createWorkflowDispatch({
         owner,
         repo,
         ref: "main",
         workflow_id: workflowId,
-        inputs: inputs,
+        inputs: {
+            ...info,
+            ...inputs,
+        },
     });
 }
 
@@ -45,7 +49,7 @@ async function startPipelineRun(projectId, pipelineId, _inputs) {
  * @typedef {{ kind: "error"; distinctId: string; error: string }} ErrorRun
  * @typedef {UnresolvedGitHubRun | ResolvedRun | ErrorRun} Run
  *
- * @typedef {{ args: string; commentId: number; distinctId: string }} Context
+ * @typedef {{ args: string; distinctId: string; issueNumber: number; statusCommentId: number }} Context
  * @typedef {(context: Context) => Promise<Run>} CommandFn
  */
 void 0;
@@ -58,17 +62,31 @@ function isUnresolvedGitHubRun(run) {
 /** @type {[name: string, fn: CommandFn][]} */
 const commandsToRun = [
     ["do something", async (context) => {
-        await startGitHubWorkflow("do-something.yml", {
-            arg: "this is some info",
-            distinct_id: context.distinctId,
-        });
+        await startGitHubWorkflow(
+            "do-something.yml",
+            {
+                distinct_id: context.distinctId,
+                issue_number: context.issueNumber,
+                status_comment_id: context.statusCommentId,
+            },
+            {
+                arg: "this is some info",
+            },
+        );
         return { kind: "unresolvedGitHub", distinctId: context.distinctId };
     }],
     ["do something else", async (context) => {
-        await startGitHubWorkflow("do-something-else.yml", {
-            arg: "this is some info again",
-            distinct_id: context.distinctId,
-        });
+        await startGitHubWorkflow(
+            "do-something-else.yml",
+            {
+                distinct_id: context.distinctId,
+                issue_number: context.issueNumber,
+                status_comment_id: context.statusCommentId,
+            },
+            {
+                arg: "this is some info again",
+            },
+        );
         return { kind: "unresolvedGitHub", distinctId: context.distinctId };
     }],
     ["do a pipeline", async (context) => {
@@ -79,7 +97,7 @@ const commandsToRun = [
 
 // Simulated comment
 const requestingIssueNumber = 1;
-const requestingCommentNumber = 19250981251;
+const requestingCommentId = 19250981251;
 
 const start = Date.now();
 const created = `>=${new Date(start).toISOString()}`;
@@ -90,7 +108,7 @@ const commandInfos = commandsToRun.map(([name, fn], index) => {
     return {
         name,
         fn,
-        distinctId: `${requestingCommentNumber}-${index}`,
+        distinctId: `${requestingCommentId}-${index}`,
     };
 });
 
@@ -123,8 +141,9 @@ const startedRuns = await Promise.all(commandInfos.map(async ({ name, fn, distin
     try {
         return await fn({
             args: name,
-            commentId: statusCommentNumber,
             distinctId,
+            issueNumber: requestingIssueNumber,
+            statusCommentId: statusCommentNumber,
         });
     } catch (e) {
         // TODO: short error message
@@ -192,7 +211,7 @@ while (startedRuns.some(isUnresolvedGitHubRun)) {
 
     for (const [i, run] of startedRuns.entries()) {
         if (isUnresolvedGitHubRun(run)) {
-            const match = runs.find((candidate) => candidate.name?.includes(`${requestingCommentNumber}-${i}`));
+            const match = runs.find((candidate) => candidate.name?.includes(`${requestingCommentId}-${i}`));
             if (match) {
                 startedRuns[i] = { kind: "resolved", distinctId: run.distinctId, url: match.html_url };
             }
