@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@octokit/webhooks':
+    specifier: ^12.0.11
+    version: 12.0.11
   octokit:
     specifier: ^3.1.2
     version: 3.1.2
@@ -13,6 +16,9 @@ dependencies:
     version: 9.0.0
 
 devDependencies:
+  '@octokit/webhooks-types':
+    specifier: ^7.3.2
+    version: 7.3.2
   '@types/node':
     specifier: ^20.11.16
     version: 20.11.16
@@ -247,6 +253,10 @@ packages:
   /@octokit/webhooks-types@7.1.0:
     resolution: {integrity: sha512-y92CpG4kFFtBBjni8LHoV12IegJ+KFxLgKRengrVjKmGE5XMeCuGvlfRe75lTRrgXaG6XIWJlFpIDTlkoJsU8w==}
     dev: false
+
+  /@octokit/webhooks-types@7.3.2:
+    resolution: {integrity: sha512-JWOoOgtWTFnTSAamPXXyjTY5/apttvNxF+vPBnwdSu5cj5snrd7FO0fyw4+wTXy8fHduq626JjhO+TwCyyA6vA==}
+    dev: true
 
   /@octokit/webhooks@12.0.11:
     resolution: {integrity: sha512-YEQOb7v0TZ662nh5jsbY1CMgJyMajCEagKrHWC30LTCwCtnuIrLtEpE20vq4AtH0SuZI90+PtV66/Bnnw0jkvg==}
