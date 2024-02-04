@@ -193,10 +193,10 @@ async function updateComment() {
                 // Do nothing
                 break;
             case "resolved":
-                replacement = `[started ✅](${run.url})`;
+                replacement = `[✅ Started](${run.url})`;
                 break;
             case "error":
-                replacement = `❌ ${run.error}`;
+                replacement = `❌ Error: ${run.error}`;
                 break;
         }
 
