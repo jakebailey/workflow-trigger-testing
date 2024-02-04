@@ -234,7 +234,7 @@ while (startedRuns.some(isUnresolvedGitHubRun)) {
 
     for (const [i, run] of startedRuns.entries()) {
         if (isUnresolvedGitHubRun(run)) {
-            const match = runs.find((candidate) => candidate.name?.includes(`${requestingCommentId}-${i}`));
+            const match = runs.find((candidate) => candidate.name?.includes(run.distinctId));
             if (match) {
                 startedRuns[i] = { kind: "resolved", distinctId: run.distinctId, url: match.html_url };
             }
