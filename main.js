@@ -126,6 +126,7 @@ function getStatusPlaceholder(distinctId) {
  * @param {string} distinctId
  */
 function getResultPlaceholder(distinctId) {
+    // This string is known to other workflows/pipelines.
     return `<!--result-${distinctId}-->`;
 }
 
@@ -136,7 +137,7 @@ Starting jobs; this comment will be updated as builds start and complete.
 | ------- | ------ | ------- |
 ${
     commandInfos.map(({ name, distinctId }) =>
-        `| ${name} | ${getStatusPlaceholder(distinctId)} | ${getResultPlaceholder(distinctId)} |`
+        `| \`${name}\` | ${getStatusPlaceholder(distinctId)} | ${getResultPlaceholder(distinctId)} |`
     )
         .join("\n")
 }
