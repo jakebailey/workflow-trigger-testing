@@ -115,15 +115,29 @@ const commandInfos = commandsToRun.map(([name, fn], index) => {
     };
 });
 
+/**
+ * @param {string} distinctId
+ */
+function getStatusPlaceholder(distinctId) {
+    return `<!--status-${distinctId}-start-->🔄<!--status-${distinctId}-end-->`;
+}
+
+/**
+ * @param {string} distinctId
+ */
+function getResultPlaceholder(distinctId) {
+    return `<!--result-${distinctId}-->`;
+}
+
 // TODO: emoji in status, replacement ranges
 const statusCommentBody = `
-Starting jobs...
+Starting jobs; this comment will be updated as builds start and complete.
 
 | Command | Status | Results |
 | ------- | ------ | ------- |
 ${
     commandInfos.map(({ name, distinctId }) =>
-        `| ${name} | <!--status-${distinctId}--> | <!--result-${distinctId}--> |`
+        `| ${name} | ${getStatusPlaceholder(distinctId)} | ${getResultPlaceholder(distinctId)} |`
     )
         .join("\n")
 }
@@ -172,7 +186,7 @@ async function updateComment() {
     assert(body);
 
     for (const run of startedRuns) {
-        const toReplace = `<!--status-${run.distinctId}-->`;
+        const toReplace = getStatusPlaceholder(run.distinctId);
         let replacement;
 
         switch (run.kind) {
@@ -180,10 +194,10 @@ async function updateComment() {
                 // Do nothing
                 break;
             case "resolved":
-                replacement = `[started](${run.url})`;
+                replacement = `[started ✅](${run.url})`;
                 break;
             case "error":
-                replacement = `error: ${run.error}`;
+                replacement = `❌ ${run.error}`;
                 break;
         }
 
