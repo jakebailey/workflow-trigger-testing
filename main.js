@@ -129,7 +129,6 @@ function getResultPlaceholder(distinctId) {
     return `<!--result-${distinctId}-->`;
 }
 
-// TODO: emoji in status, replacement ranges
 const statusCommentBody = `
 Starting jobs; this comment will be updated as builds start and complete.
 
