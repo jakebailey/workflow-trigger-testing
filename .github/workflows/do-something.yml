@@ -58,16 +58,16 @@ jobs:
             let commentBody;
             switch (ARGS) {
               case "successfully":
-                commentBody = "The results for ${ARGS} are in!\n\nEverything looks good!";
+                commentBody = `The results for \`${ARGS}\` are in!\n\nEverything looks good!`;
                 break;
               case "interesting":
-                commentBody = "The results for ${ARGS} are in!\n\nSomething interesting changed!\n\n...";
+                commentBody = `The results for \`${ARGS}\` are in!\n\nSomething interesting changed!\n\n...`;
                 break;
               case "failing":
-                commentBody = "The results for ${ARGS} are in!\n\nSomething went wrong!";
+                commentBody = `The results for \`${ARGS}\` are in!\n\nSomething went wrong!`;
                 break;
               default:
-                commentBody = "The results for ${ARGS} are in!\n\nI don't know what to say!";
+                commentBody = `The results for \`${ARGS}\` are in!\n\nI don't know what to say!`;
                 break;
             }
 
