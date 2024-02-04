@@ -95,6 +95,9 @@ const commandsToRun = [
     }],
 ];
 
+commandsToRun.push(...commandsToRun);
+commandsToRun.push(...commandsToRun);
+
 // Simulated comment
 const requestingIssueNumber = 1;
 const requestingCommentId = 19250981251;
