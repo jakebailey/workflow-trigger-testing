@@ -3,7 +3,7 @@ name: Do something
 on:
   workflow_dispatch:
     inputs:
-      arg:
+      args:
         description: 'An argument'
         required: true
         default: ''
@@ -43,24 +43,58 @@ jobs:
           sleep 20
 
       - run: |
-          echo "Running with arg: ${{ inputs.arg }}"
+          echo "Running with args: ${{ inputs.args }}"
 
       - uses: actions/github-script@v7
         env:
           DISTINCT_ID: ${{ inputs.distinct_id }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
           STATUS_COMMENT_ID: ${{ inputs.status_comment_id }}
-          ARG: ${{ inputs.arg }}
+          ARGS: ${{ inputs.args }}
         with:
           script: |
-            const { DISTINCT_ID, ISSUE_NUMBER, STATUS_COMMENT_ID, ARG } = process.env;
+            const { DISTINCT_ID, ISSUE_NUMBER, STATUS_COMMENT_ID, ARGS } = process.env;
+
+            let commentBody;
+            switch (ARGS) {
+              case "successfully":
+                commentBody = "The results for ${ARGS} are in!\n\nEverything looks good!";
+                break;
+              case "interesting":
+                commentBody = "The results for ${ARGS} are in!\n\nSomething interesting changed!\n\n...";
+                break;
+              case "failing":
+                commentBody = "The results for ${ARGS} are in!\n\nSomething went wrong!";
+                break;
+              default:
+                commentBody = "The results for ${ARGS} are in!\n\nI don't know what to say!";
+                break;
+            }
+
+
             // Post results
             const resultsComment = await github.rest.issues.createComment({
               issue_number: +ISSUE_NUMBER,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `The results for ${ARG} are in!`,
+              body: commentBody,
             });
+
+            let emoji;
+            switch (ARGS) {
+              case "successfully":
+                emoji = "✅";
+                break;
+              case "interesting":
+                emoji = "👀";
+                break;
+              case "failing":
+                emoji = "❌";
+                break;
+              default:
+                emoji = "❓";
+                break;
+            }
 
             const toReplace = `<!--result-${DISTINCT_ID}-->`;
             while (true) {
@@ -78,7 +112,7 @@ jobs:
 
               const newComment = oldComment.replace(
                 toReplace,
-                `[Results](${resultsComment.data.html_url})`,
+                `[${emoji} Results](${resultsComment.data.html_url})`,
               )
 
               // Update status comment
