@@ -62,23 +62,34 @@ jobs:
               body: `The results for ${ARG} are in!`,
             });
 
-            // Get status comment contents
-            const statusComment = await github.rest.issues.getComment({
-              comment_id: +STATUS_COMMENT_ID,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
+            const toReplace = `<!--result-${DISTINCT_ID}-->`;
+            while (true) {
+              // Get status comment contents
+              const statusComment = await github.rest.issues.getComment({
+                comment_id: +STATUS_COMMENT_ID,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              });
 
-            const newComment = statusComment.data.body.replace(
-              `<!--result-${DISTINCT_ID}-->`,
-              `[Results](${resultsComment.data.html_url})`,
-            )
+              const oldComment = statusComment.data.body;
+              if (!oldComment.includes(toReplace)) {
+                break;
+              }
 
-            // Update status comment
-            await github.rest.issues.updateComment({
-              comment_id: +STATUS_COMMENT_ID,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: newComment,
-            });
+              const newComment = oldComment.replace(
+                toReplace,
+                `[Results](${resultsComment.data.html_url})`,
+              )
+
+              // Update status comment
+              await github.rest.issues.updateComment({
+                comment_id: +STATUS_COMMENT_ID,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: newComment,
+              });
+
+              // Repeat; someone may have edited the comment at the same time.
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
         if: ${{ inputs.distinct_id }}

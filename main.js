@@ -115,6 +115,7 @@ const commandInfos = commandsToRun.map(([name, fn], index) => {
     };
 });
 
+// TODO: emoji in status, replacement ranges
 const statusCommentBody = `
 Starting jobs...
 
