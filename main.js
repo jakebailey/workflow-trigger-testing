@@ -311,9 +311,15 @@ const webhooks = new Webhooks({
 
 webhooks.onAny(async ({ name, payload }) => {
     console.log(name, "event received");
-    const isNewCommentWithBody = "action" in payload && payload.action === "created"
-        && ("issue" in payload || "pull_request" in payload) && payload.comment.body;
-    if (!isNewCommentWithBody) {
+    const isNewComment = "action" in payload
+        && (payload.action === "created" || payload.action === "submitted")
+        && ("issue" in payload || "pull_request" in payload);
+    if (!isNewComment) {
+        return;
+    }
+
+    const comment = "comment" in payload ? payload.comment : payload.review;
+    if (!comment.body) {
         return;
     }
 
@@ -324,11 +330,11 @@ webhooks.onAny(async ({ name, payload }) => {
 
     await webhook({
         issue: issueNumber,
-        commentId: payload.comment.id,
-        commentBody: payload.comment.body,
+        commentId: comment.id,
+        commentBody: comment.body,
         isPr,
-        commentUser: payload.comment.user.login,
-        authorAssociation: payload.comment.author_association,
+        commentUser: comment.user.login,
+        authorAssociation: comment.author_association,
     });
 });
 
