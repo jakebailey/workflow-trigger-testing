@@ -1,9 +1,13 @@
+import { createNodeMiddleware, Webhooks } from "@octokit/webhooks";
 import assert from "node:assert";
+import { createServer } from "node:http";
 import { Octokit } from "octokit";
 import prettyMilliseconds from "pretty-ms";
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
+const GITHUB_BOT_TOKEN = process.env.GITHUB_BOT_TOKEN;
+const botOctokit = new Octokit({ auth: GITHUB_BOT_TOKEN });
 
 const owner = "jakebailey";
 const repo = "workflow-trigger-testing";
@@ -57,8 +61,7 @@ async function startPipelineRun(projectId, pipelineId, _inputs) {
  *     statusCommentId: number;
  * }} Context
  * @typedef {(context: Context) => Promise<Run>} CommandFn
- * @typedef {"MEMBER" | "OWNER" | "COLLABORATOR"} Relationship
- * @typedef {{ fn: CommandFn; relationships: Relationship[]; prOnly: boolean }} Command
+ * @typedef {{ fn: CommandFn; authorAssociations: import("@octokit/webhooks-types").AuthorAssociation[]; prOnly: boolean }} Command
  */
 void 0;
 
@@ -69,12 +72,12 @@ function isUnresolvedGitHubRun(run) {
 
 /**
  * @param {CommandFn} fn
- * @param {Relationship[]} relationships
+ * @param {import("@octokit/webhooks-types").AuthorAssociation[]} authorAssociations
  * @param {boolean} prOnly
  * @returns {Command}
  */
-function createCommand(fn, relationships = ["MEMBER", "OWNER", "COLLABORATOR"], prOnly = true) {
-    return { fn, relationships, prOnly };
+function createCommand(fn, authorAssociations = ["MEMBER", "OWNER", "COLLABORATOR"], prOnly = true) {
+    return { fn, authorAssociations, prOnly };
 }
 
 const commands = (/** @type {Map<RegExp, Command>} */ (new Map()))
@@ -121,15 +124,17 @@ function getResultPlaceholder(distinctId) {
 
 const botCall = "@typescript-bot";
 
-/** @param {{ issue: number; commentId: number; commentBody: string; isPr: boolean; commentUser: string; authorAssociation: Relationship }} request */
+/** @param {{ issue: number; commentId: number; commentBody: string; isPr: boolean; commentUser: string; authorAssociation: import("@octokit/webhooks-types").AuthorAssociation }} request */
 async function webhook(request) {
+    console.log(request);
+
     const lines = request.commentBody.split("\n").map((line) => line.trim());
 
     const applicableCommands = Array.from(commands.entries()).filter(([, command]) => {
         if (!request.isPr && command.prOnly) {
             return false;
         }
-        return command.relationships.includes(request.authorAssociation);
+        return command.authorAssociations.includes(request.authorAssociation);
     });
 
     if (applicableCommands.length === 0) {
@@ -177,7 +182,7 @@ ${
 
     console.log(statusCommentBody);
 
-    const statusComment = await octokit.rest.issues.createComment({
+    const statusComment = await botOctokit.rest.issues.createComment({
         owner,
         repo,
         issue_number: request.issue,
@@ -208,7 +213,7 @@ ${
     console.table(startedRuns);
 
     async function updateComment() {
-        const comment = await octokit.rest.issues.getComment({
+        const comment = await botOctokit.rest.issues.getComment({
             owner,
             repo,
             comment_id: statusCommentNumber,
@@ -243,7 +248,7 @@ ${
             return;
         }
 
-        await octokit.rest.issues.updateComment({
+        await botOctokit.rest.issues.updateComment({
             owner,
             repo,
             comment_id: statusCommentNumber,
@@ -284,16 +289,47 @@ ${
 }
 
 // Simulated comment
-await webhook({
-    issue: 1,
-    commentId: 19250981251,
-    commentBody: `
-@typescript-bot do something successfully
-@typescript-bot do something interesting
-@typescript-bot do something failing
-@typescript-bot run a pipeline
-`,
-    isPr: true,
-    commentUser: "jakebailey",
-    authorAssociation: "OWNER",
+// await webhook({
+//     issue: 1,
+//     commentId: 19250981251,
+//     commentBody: `
+// @typescript-bot do something successfully
+// @typescript-bot do something interesting
+// @typescript-bot do something failing
+// @typescript-bot run a pipeline
+// `,
+//     isPr: true,
+//     commentUser: "jakebailey",
+//     authorAssociation: "OWNER",
+// });
+
+const webhookSecret = process.env.WEBHOOK_SECRET;
+assert(webhookSecret);
+const webhooks = new Webhooks({
+    secret: webhookSecret,
 });
+
+webhooks.onAny(async ({ name, payload }) => {
+    console.log(name, "event received");
+    const isNewCommentWithBody = "action" in payload && payload.action === "created"
+        && ("issue" in payload || "pull_request" in payload) && payload.comment.body;
+    if (!isNewCommentWithBody) {
+        return;
+    }
+
+    const isPr = !!("pull_request" in payload && payload.pull_request)
+        || !!("issue" in payload && payload.issue && payload.issue.pull_request);
+
+    const issueNumber = "issue" in payload ? payload.issue.number : payload.pull_request.number;
+
+    await webhook({
+        issue: issueNumber,
+        commentId: payload.comment.id,
+        commentBody: payload.comment.body,
+        isPr,
+        commentUser: payload.comment.user.login,
+        authorAssociation: payload.comment.author_association,
+    });
+});
+
+createServer(createNodeMiddleware(webhooks)).listen(3000);
