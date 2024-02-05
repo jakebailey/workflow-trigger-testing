@@ -190,7 +190,7 @@ ${
         body: statusCommentBody,
     });
 
-    const statusCommentNumber = statusComment.data.id;
+    const statusCommentId = statusComment.data.id;
 
     /** @type {Run[]} */
     const startedRuns = await Promise.all(commandInfos.map(async ({ match, fn, distinctId }) => {
@@ -199,7 +199,7 @@ ${
                 match,
                 distinctId,
                 issueNumber: request.issueNumber,
-                statusCommentId: statusCommentNumber,
+                statusCommentId: statusCommentId,
                 requestingUser: request.commentUser,
             });
         } catch (e) {
@@ -217,7 +217,7 @@ ${
         const comment = await botOctokit.rest.issues.getComment({
             owner,
             repo,
-            comment_id: statusCommentNumber,
+            comment_id: statusCommentId,
         });
 
         const originalBody = comment.data.body;
@@ -252,7 +252,7 @@ ${
         await botOctokit.rest.issues.updateComment({
             owner,
             repo,
-            comment_id: statusCommentNumber,
+            comment_id: statusCommentId,
             body,
         });
     }
