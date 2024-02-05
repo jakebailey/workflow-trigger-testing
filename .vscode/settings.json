@@ -1,7 +1,7 @@
 {
     "[typescript][javascript][json][jsonc][markdown][yaml]": {
         "editor.defaultFormatter": "dprint.dprint",
-        "editor.formatOnSave": true
+        "editor.formatOnSave": true // cool
     },
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "explicit"
