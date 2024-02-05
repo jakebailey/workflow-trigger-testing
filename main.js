@@ -4,10 +4,8 @@ import { createServer } from "node:http";
 import { Octokit } from "octokit";
 import prettyMilliseconds from "pretty-ms";
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const octokit = new Octokit({ auth: GITHUB_TOKEN });
-const GITHUB_BOT_TOKEN = process.env.GITHUB_BOT_TOKEN;
-const botOctokit = new Octokit({ auth: GITHUB_BOT_TOKEN });
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+const botOctokit = new Octokit({ auth: process.env.GITHUB_BOT_TOKEN });
 
 const owner = "jakebailey";
 const repo = "workflow-trigger-testing";
@@ -25,6 +23,10 @@ function sleep(ms) {
  * @param {Record<string, string>} inputs
  */
 async function startGitHubWorkflow(workflowId, info, inputs) {
+    const infoKeys = Object.keys(info);
+    const inputKeys = Object.keys(inputs).filter((key) => infoKeys.includes(key));
+    assert(inputKeys.length === 0, `Inputs conflict with info: ${inputKeys.join(", ")}`);
+
     await octokit.rest.actions.createWorkflowDispatch({
         owner,
         repo,
