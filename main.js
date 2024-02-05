@@ -68,11 +68,6 @@ async function startPipelineRun(projectId, pipelineId, _inputs) {
  */
 void 0;
 
-/** @type {(run: Run) => run is UnresolvedGitHubRun} */
-function isUnresolvedGitHubRun(run) {
-    return run.kind === "unresolvedGitHub";
-}
-
 /**
  * @param {CommandFn} fn
  * @param {AuthorAssociation[]} authorAssociations
@@ -262,7 +257,7 @@ ${
     await updateComment();
     console.log("Updated comment with build links");
 
-    while (startedRuns.some(isUnresolvedGitHubRun)) {
+    while (startedRuns.some((run) => run.kind === "unresolvedGitHub")) {
         await sleep(300);
 
         const response = await octokit.rest.actions.listWorkflowRunsForRepo({
@@ -274,7 +269,7 @@ ${
         const runs = response.data.workflow_runs;
 
         for (const [i, run] of startedRuns.entries()) {
-            if (isUnresolvedGitHubRun(run)) {
+            if (run.kind === "unresolvedGitHub") {
                 const match = runs.find((candidate) => candidate.name?.includes(run.distinctId));
                 if (match) {
                     startedRuns[i] = { kind: "resolved", distinctId: run.distinctId, url: match.html_url };
