@@ -48,6 +48,7 @@ async function startPipelineRun(projectId, pipelineId, _inputs) {
 }
 
 /**
+ * @typedef {import("@octokit/webhooks-types").AuthorAssociation} AuthorAssociation
  * @typedef {{ kind: "unresolvedGitHub"; distinctId: string }} UnresolvedGitHubRun
  * @typedef {{ kind: "resolved"; distinctId: string; url: string }} ResolvedRun
  * @typedef {{ kind: "error"; distinctId: string; error: string }} ErrorRun
@@ -61,7 +62,7 @@ async function startPipelineRun(projectId, pipelineId, _inputs) {
  *     statusCommentId: number;
  * }} Context
  * @typedef {(context: Context) => Promise<Run>} CommandFn
- * @typedef {{ fn: CommandFn; authorAssociations: import("@octokit/webhooks-types").AuthorAssociation[]; prOnly: boolean }} Command
+ * @typedef {{ fn: CommandFn; authorAssociations: AuthorAssociation[]; prOnly: boolean }} Command
  */
 void 0;
 
@@ -72,7 +73,7 @@ function isUnresolvedGitHubRun(run) {
 
 /**
  * @param {CommandFn} fn
- * @param {import("@octokit/webhooks-types").AuthorAssociation[]} authorAssociations
+ * @param {AuthorAssociation[]} authorAssociations
  * @param {boolean} prOnly
  * @returns {Command}
  */
@@ -124,7 +125,7 @@ function getResultPlaceholder(distinctId) {
 
 const botCall = "@typescript-bot";
 
-/** @param {{ issue: number; commentId: number; commentBody: string; isPr: boolean; commentUser: string; authorAssociation: import("@octokit/webhooks-types").AuthorAssociation }} request */
+/** @param {{ issueNumber: number; commentId: number; commentBody: string; isPr: boolean; commentUser: string; authorAssociation: AuthorAssociation }} request */
 async function webhook(request) {
     console.log(request);
 
@@ -185,7 +186,7 @@ ${
     const statusComment = await botOctokit.rest.issues.createComment({
         owner,
         repo,
-        issue_number: request.issue,
+        issue_number: request.issueNumber,
         body: statusCommentBody,
     });
 
@@ -197,7 +198,7 @@ ${
             return await fn({
                 match,
                 distinctId,
-                issueNumber: request.issue,
+                issueNumber: request.issueNumber,
                 statusCommentId: statusCommentNumber,
                 requestingUser: request.commentUser,
             });
@@ -329,7 +330,7 @@ webhooks.onAny(async ({ name, payload }) => {
     const issueNumber = "issue" in payload ? payload.issue.number : payload.pull_request.number;
 
     await webhook({
-        issue: issueNumber,
+        issueNumber,
         commentId: comment.id,
         commentBody: comment.body,
         isPr,
