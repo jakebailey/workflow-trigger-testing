@@ -41,7 +41,7 @@ jobs:
 
     steps:
       - run: |
-          sleep 20
+          sleep $(( 1 + RANDOM % 4 ))
 
       - run: |
           echo "Running with args: ${{ inputs.args }}"
