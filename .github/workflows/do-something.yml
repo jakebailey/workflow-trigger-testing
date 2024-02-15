@@ -8,17 +8,21 @@ on:
         required: true
         default: ''
 
-      # For bot trigger
+      # Inputs provided by the bot
       distinct_id:
         description: '(bot) A distinct ID'
         required: false
         default: ''
-      issue_number:
-        description: '(bot) An issue number'
+      source_issue:
+        description: '(bot) The issue that triggered this workflow'
         required: false
         default: ''
-      status_comment_id:
-        description: '(bot) A comment ID'
+      requesting_user:
+        description: '(bot) The user who requested this workflow'
+        required: false
+        default: ''
+      status_comment:
+        description: '(bot) The comment to update with the status of this workflow'
         required: false
         default: ''
 

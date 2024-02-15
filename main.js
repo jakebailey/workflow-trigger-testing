@@ -103,6 +103,24 @@ const commands = (/** @type {Map<RegExp, Command>} */ (new Map()))
             const url = await startPipelineRun("my-project", 123, {});
             return { kind: "resolved", distinctId: context.distinctId, url };
         }),
+    )
+    .set(
+        /do something new (pass|fail)/,
+        createCommand(async (context) => {
+            const args = context.match[1];
+            await startGitHubWorkflow(
+                "do-something-new.yml",
+                {
+                    distinct_id: context.distinctId,
+                    issue_number: `${context.issueNumber}`,
+                    status_comment_id: `${context.statusCommentId}`,
+                },
+                {
+                    args,
+                },
+            );
+            return { kind: "unresolvedGitHub", distinctId: context.distinctId };
+        }),
     );
 
 /**
