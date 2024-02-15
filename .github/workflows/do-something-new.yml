@@ -53,7 +53,7 @@ jobs:
       - run: exit 1
         if: ${{ inputs.args == 'fail' }}
 
-      - uses: ./.github/actions/post-workflow-result
+      - uses: ./.github/actions/post-workflow-result@main
         if: ${{ !cancelled() && inputs.distinct_id }}
         with:
           success_comment: "It worked!."
