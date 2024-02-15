@@ -19,7 +19,7 @@ function sleep(ms) {
 
 /**
  * @param {string} workflowId
- * @param {{ distinct_id: string; issue_number: string; status_comment_id: string }} info
+ * @param {{ distinct_id: string; source_issue: string; requesting_user: string; status_comment: string }} info
  * @param {Record<string, string>} inputs
  */
 async function startGitHubWorkflow(workflowId, info, inputs) {
@@ -87,8 +87,9 @@ const commands = (/** @type {Map<RegExp, Command>} */ (new Map()))
                 "do-something.yml",
                 {
                     distinct_id: context.distinctId,
-                    issue_number: `${context.issueNumber}`,
-                    status_comment_id: `${context.statusCommentId}`,
+                    source_issue: `${context.issueNumber}`,
+                    requesting_user: context.requestingUser,
+                    status_comment: `${context.statusCommentId}`,
                 },
                 {
                     args,
@@ -112,8 +113,9 @@ const commands = (/** @type {Map<RegExp, Command>} */ (new Map()))
                 "do-something-new.yml",
                 {
                     distinct_id: context.distinctId,
-                    issue_number: `${context.issueNumber}`,
-                    status_comment_id: `${context.statusCommentId}`,
+                    source_issue: `${context.issueNumber}`,
+                    requesting_user: context.requestingUser,
+                    status_comment: `${context.statusCommentId}`,
                 },
                 {
                     args,

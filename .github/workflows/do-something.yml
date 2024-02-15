@@ -53,12 +53,12 @@ jobs:
       - uses: actions/github-script@v7
         env:
           DISTINCT_ID: ${{ inputs.distinct_id }}
-          ISSUE_NUMBER: ${{ inputs.issue_number }}
-          STATUS_COMMENT_ID: ${{ inputs.status_comment_id }}
+          source_issue: ${{ inputs.source_issue }}
+          status_comment: ${{ inputs.status_comment }}
           ARGS: ${{ inputs.args }}
         with:
           script: |
-            const { DISTINCT_ID, ISSUE_NUMBER, STATUS_COMMENT_ID, ARGS } = process.env;
+            const { DISTINCT_ID, source_issue, status_comment, ARGS } = process.env;
 
             let commentBody;
             switch (ARGS) {
@@ -79,7 +79,7 @@ jobs:
 
             // Post results
             const resultsComment = await github.rest.issues.createComment({
-              issue_number: +ISSUE_NUMBER,
+              source_issue: +source_issue,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: commentBody,
@@ -105,7 +105,7 @@ jobs:
             while (true) {
               // Get status comment contents
               const statusComment = await github.rest.issues.getComment({
-                comment_id: +STATUS_COMMENT_ID,
+                comment_id: +status_comment,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
               });
@@ -122,7 +122,7 @@ jobs:
 
               // Update status comment
               await github.rest.issues.updateComment({
-                comment_id: +STATUS_COMMENT_ID,
+                comment_id: +status_comment,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 body: newComment,

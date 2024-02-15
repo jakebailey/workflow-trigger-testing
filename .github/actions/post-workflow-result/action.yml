@@ -64,7 +64,7 @@ runs:
 
           // Post results
           const resultsComment = await github.rest.issues.createComment({
-            issue_number: +ISSUE_NUMBER,
+            source_issue: +source_issue,
             owner: context.repo.owner,
             repo: context.repo.repo,
             body: commentBody,
@@ -76,7 +76,7 @@ runs:
           while (true) {
             // Get status comment contents
             const statusComment = await github.rest.issues.getComment({
-              comment_id: +STATUS_COMMENT_ID,
+              comment_id: +status_comment,
               owner: context.repo.owner,
               repo: context.repo.repo,
             });
@@ -93,7 +93,7 @@ runs:
 
             // Update status comment
             await github.rest.issues.updateComment({
-              comment_id: +STATUS_COMMENT_ID,
+              comment_id: +status_comment,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: newComment,
